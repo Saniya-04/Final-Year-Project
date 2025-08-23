@@ -1,17 +1,18 @@
 package main // Declares the package name
 
 import (
-	"encoding/json"    // For JSON encoding/decoding
-	"fmt"              // For formatted I/O
-	"log"              // For logging errors/info
-	"os"               // For OS functions (files, signals)
-	"os/signal"        // For handling OS signals (e.g., Ctrl+C)
-	"sort"             // For sorting slices
-	"strings"          // For string manipulation
-	"syscall"          // For syscall constants (e.g., SIGTERM)
-	"time"             // For time-related functions
+	"encoding/json" // For JSON encoding/decoding
+	"fmt"           // For formatted I/O
+	"log"           // For logging errors/info
+	"math"
+	"os"        // For OS functions (files, signals)
+	"os/signal" // For handling OS signals (e.g., Ctrl+C)
+	"sort"      // For sorting slices
+	"strings"   // For string manipulation
+	"syscall"   // For syscall constants (e.g., SIGTERM)
+	"time"      // For time-related functions
 
-	"github.com/cilium/ebpf"    // For eBPF program/map handling
+	"github.com/cilium/ebpf"      // For eBPF program/map handling
 	"github.com/cilium/ebpf/link" // For attaching eBPF programs to tracepoints
 )
 
@@ -19,7 +20,7 @@ const taskCommLen = 16 // Length of the process name (comm) in Linux
 
 // memKey represents the key for the eBPF map: PID and process name
 type memKey struct {
-	Pid  uint32           // Process ID
+	Pid  uint32            // Process ID
 	Comm [taskCommLen]byte // Process name (comm), fixed size
 }
 
@@ -31,13 +32,13 @@ type memStats struct {
 
 // leakReportEntry is the structure for JSON leak report entries
 type leakReportEntry struct {
-	PID         uint32  `json:"pid"`              // Process ID
-	ProcessName string  `json:"process_name"`     // Process name
-	AllocKB     uint64  `json:"alloc_kb"`         // Allocated memory in KB
-	FreeKB      uint64  `json:"free_kb"`          // Freed memory in KB
+	PID         uint32  `json:"pid"`                 // Process ID
+	ProcessName string  `json:"process_name"`        // Process name
+	AllocKB     uint64  `json:"alloc_kb"`            // Allocated memory in KB
+	FreeKB      uint64  `json:"free_kb"`             // Freed memory in KB
 	Ratio       float64 `json:"alloc_to_free_ratio"` // Allocation to free ratio
-	LeakSuspect bool    `json:"leak_suspect"`     // Whether this is a leak suspect
-	Timestamp   string  `json:"timestamp"`        // Timestamp of the report
+	LeakSuspect bool    `json:"leak_suspect"`        // Whether this is a leak suspect
+	Timestamp   string  `json:"timestamp"`           // Timestamp of the report
 }
 
 // commToString converts a [16]byte comm to a trimmed string
@@ -48,7 +49,7 @@ func commToString(c [taskCommLen]byte) string {
 }
 
 func main() {
-	objPath := "ram_monitor.o" // Path to the compiled eBPF object file
+	objPath := "ram_monitor.o"                    // Path to the compiled eBPF object file
 	spec, err := ebpf.LoadCollectionSpec(objPath) // Load eBPF program/map specs
 	if err != nil {
 		log.Fatalf("loading BPF spec %q: %v", objPath, err) // Exit on error
@@ -85,10 +86,10 @@ func main() {
 
 	log.Println("Monitoring RAM allocations (pid+comm -> alloc/free bytes)...") // Info message
 
-	stop := make(chan os.Signal, 1) // Channel to receive OS signals
+	stop := make(chan os.Signal, 1)                    // Channel to receive OS signals
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM) // Listen for interrupt/terminate
-	ticker := time.NewTicker(2 * time.Second) // Ticker for periodic reporting
-	defer ticker.Stop() // Clean up ticker
+	ticker := time.NewTicker(1 * time.Second)          // Ticker for periodic reporting
+	defer ticker.Stop()                                // Clean up ticker
 
 mainloop:
 	for {
@@ -107,88 +108,141 @@ mainloop:
 // printLeakReport reads the eBPF map, prints a report, and writes JSON
 func printLeakReport(m *ebpf.Map) error {
 	type entry struct {
-		key   memKey   // Map key (PID+comm)
-		stats memStats // Map value (alloc/free stats)
+		key   memKey
+		stats memStats
 	}
 
-	var entries []entry // Slice to hold all entries
-	var k memKey        // Temp key for iteration
-	var v memStats      // Temp value for iteration
+	var entries []entry
+	var k memKey
+	var v memStats
 
-	it := m.Iterate() // Get map iterator
-	for it.Next(&k, &v) { // Iterate over all map entries
-		keyCopy := k   // Copy key (avoid pointer reuse)
-		valCopy := v   // Copy value
-		entries = append(entries, entry{key: keyCopy, stats: valCopy}) // Add to slice
+	it := m.Iterate()
+	for it.Next(&k, &v) {
+		keyCopy := k
+		valCopy := v
+		entries = append(entries, entry{key: keyCopy, stats: valCopy})
 	}
-	if err := it.Err(); err != nil { // Check for iteration errors
+	if err := it.Err(); err != nil {
 		return fmt.Errorf("map iterate error: %w", err)
 	}
 
-	if len(entries) == 0 { // If map is empty
+	if len(entries) == 0 {
 		fmt.Println("\n=== RAM Leak Report === (empty)")
 		return nil
 	}
 
-	// Sort entries by allocated bytes, descending
+	// Sort by allocated bytes desc
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].stats.AllocBytes > entries[j].stats.AllocBytes
 	})
 
-	fmt.Println("\n=== RAM Leak Report ===") // Print header
-	var jsonEntries []leakReportEntry // Slice for JSON output
-	now := time.Now().Format(time.RFC3339) // Current timestamp
+	fmt.Println("\n=== RAM Leak Report ===")
+	var jsonEntries []leakReportEntry
 
-	for _, e := range entries { // For each entry
-		name := commToString(e.key.Comm) // Convert comm to string
-		allocKB := e.stats.AllocBytes / 1024 // Allocated KB
-		freeKB := e.stats.FreeBytes / 1024   // Freed KB
+	for _, e := range entries {
+		name := commToString(e.key.Comm)
+		allocKB := e.stats.AllocBytes / 1024
+		freeKB := e.stats.FreeBytes / 1024
 
-		ratio := float64(e.stats.AllocBytes) / float64(max(e.stats.FreeBytes, 1)) // Alloc/free ratio
-		leakSuspect := ratio > 1.2 && allocKB > 1024 // Heuristic: suspect if ratio high and alloc > 1MB
+		// compute ratio safely
+		var ratio float64
+		if e.stats.FreeBytes == 0 {
+			// indicator that no frees observed — use a sentinel value (-1)
+			ratio = -1.0
+		} else {
+			ratio = float64(e.stats.AllocBytes) / float64(e.stats.FreeBytes)
+			// cap ratio to avoid absurd JSON numbers (optional visual safety)
+			if math.IsInf(ratio, 0) || math.IsNaN(ratio) {
+				ratio = -1.0
+			} else if ratio > 1e6 {
+				ratio = 1e6
+			}
+		}
+
+		// Improved leak heuristic:
+		// - If allocKB >= 1MB and ratio >= 1.2 => suspect
+		// - OR if freeKB == 0 and allocKB >= 512KB => suspect (no frees observed)
+		leakSuspect := false
+		if allocKB >= 1024 && ratio >= 1.2 {
+			leakSuspect = true
+		} else if freeKB == 0 && allocKB >= 512 {
+			leakSuspect = true
+		}
 
 		status := ""
 		if leakSuspect {
-			status = " [LEAK SUSPECT]" // Mark as suspect
+			status = " [LEAK SUSPECT]"
 		}
 
-		// Print entry to console
-		fmt.Printf("PID: %-6d (%-20s) - Alloc: %8d KB | Freed: %8d KB | Ratio: %.2f%s\n",
-			e.key.Pid, truncate(name, 20), allocKB, freeKB, ratio, status)
+		// print friendly ratio for console
+		printRatio := ""
+		if ratio < 0 {
+			printRatio = "N/A" // no frees observed
+		} else {
+			printRatio = fmt.Sprintf("%.2f", ratio)
+		}
 
-		// Add entry to JSON slice
+		fmt.Printf("PID: %-6d (%-20s) - Alloc: %8d KB | Freed: %8d KB | Ratio: %6s%s\n",
+			e.key.Pid, truncate(name, 20), allocKB, freeKB, printRatio, status)
+
+		// per-entry timestamp so each JSON entry is precise
+		now := time.Now().Format(time.RFC3339)
+
+		// For JSON, if ratio == -1 (no frees), serialize ratio as null-like sentinel:
+		jsonRatio := ratio
+		if ratio < 0 {
+			// keep numeric but negative signals "no frees" — you can interpret this in consumer
+			jsonRatio = -1.0
+		}
+
 		jsonEntries = append(jsonEntries, leakReportEntry{
 			PID:         e.key.Pid,
 			ProcessName: name,
 			AllocKB:     allocKB,
 			FreeKB:      freeKB,
-			Ratio:       ratio,
+			Ratio:       jsonRatio,
 			LeakSuspect: leakSuspect,
 			Timestamp:   now,
 		})
 
-		m.Delete(&e.key) // Optionally clear map for next tick
+		// delete key to clear counters for next tick (keeps your previous behavior)
+		if err := m.Delete(&e.key); err != nil {
+			// ignore races; optionally log unexpected errors
+		}
 	}
 
-	return writeLeakReportJSON(jsonEntries) // Write JSON file
+	// write JSON snapshot for this tick
+	return writeLeakReportJSON(jsonEntries)
 }
 
 // writeLeakReportJSON writes the leak report to a JSON file
-func writeLeakReportJSON(data []leakReportEntry) error {
-	file, err := os.OpenFile("leak_report.json", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644) // Open file for writing
+// replace writeLeakReportJSON with this (unchanged semantics, but kept here for completeness)
+func writeLeakReportJSON(filename string, entries []entry) error {
+	var existing []entry
+
+	// Try to read existing file
+	if data, err := os.ReadFile(filename); err == nil {
+		if len(data) > 0 {
+			if err := json.Unmarshal(data, &existing); err != nil {
+				return fmt.Errorf("failed to unmarshal existing JSON: %w", err)
+			}
+		}
+	}
+
+	// Append new entries
+	existing = append(existing, entries...)
+
+	// Write updated array back to file
+	data, err := json.MarshalIndent(existing, "", "  ")
 	if err != nil {
-		return fmt.Errorf("opening JSON file: %w", err) // Return error if failed
-	}
-	defer file.Close() // Close file on exit
-
-	encoder := json.NewEncoder(file) // Create JSON encoder
-	encoder.SetIndent("", "  ")      // Pretty-print JSON
-
-	if err := encoder.Encode(data); err != nil { // Encode data to file
-		return fmt.Errorf("encoding JSON: %w", err) // Return error if failed
+		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	return nil // Success
+	if err := os.WriteFile(filename, data, 0644); err != nil {
+		return fmt.Errorf("failed to write JSON file: %w", err)
+	}
+
+	return nil
 }
 
 // truncate shortens a string to n characters, adding "..." if needed
