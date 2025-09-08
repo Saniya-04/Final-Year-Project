@@ -217,8 +217,10 @@ func printLeakReport(m *ebpf.Map) error {
 
 // writeLeakReportJSON writes the leak report to a JSON file
 // replace writeLeakReportJSON with this (unchanged semantics, but kept here for completeness)
-func writeLeakReportJSON(filename string, entries []entry) error {
-	var existing []entry
+func writeLeakReportJSON(entries []leakReportEntry) error {
+	const filename = "leak_report.json"
+
+	var existing []leakReportEntry
 
 	// Try to read existing file
 	if data, err := os.ReadFile(filename); err == nil {
