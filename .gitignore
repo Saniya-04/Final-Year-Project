@@ -1,1 +1,14 @@
 .vscode/
+
+# Ignore Firebase service account key
+Server/serviceAccountKey.json
+
+# Other common ignores
+*.log
+*.tmp
+*.swp
+.DS_Store
+node_modules/
+venv/
+__pycache__/
+.env
