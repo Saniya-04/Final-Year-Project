@@ -45,16 +45,31 @@ func handleConnection(conn net.Conn) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		var r Report
-		if err := json.Unmarshal([]byte(line), &r); err != nil {
-			log.Printf("invalid JSON from %s: %v", conn.RemoteAddr(), err)
-			continue
+
+		// First try to decode as an array of reports
+		var reports []Report
+		if err := json.Unmarshal([]byte(line), &reports); err != nil {
+			// If that fails, try to decode as a single report
+			var r Report
+			if err2 := json.Unmarshal([]byte(line), &r); err2 != nil {
+				log.Printf("invalid JSON from %s: %v", conn.RemoteAddr(), err)
+				continue
+			}
+			if r.TimeStamp == 0 {
+				r.TimeStamp = time.Now().Unix()
+			}
+			reports = append(reports, r)
 		}
-		if r.TimeStamp == 0 {
-			r.TimeStamp = time.Now().Unix()
+
+		// Push each report to the channel
+		for _, r := range reports {
+			if r.TimeStamp == 0 {
+				r.TimeStamp = time.Now().Unix()
+			}
+			reportChan <- r
 		}
-		reportChan <- r
 	}
+
 	if err := scanner.Err(); err != nil {
 		log.Printf("error reading from %s: %v", conn.RemoteAddr(), err)
 	}
