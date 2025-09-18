@@ -1,4 +1,4 @@
-#include "vmlinux.h" // Include kernel vmlinux BTF header for eBPF
+#include "vmlinux.h"         // Include kernel vmlinux BTF header for eBPF
 #include <bpf/bpf_helpers.h> // eBPF helper macros and functions
 #include <bpf/bpf_tracing.h> // eBPF tracing helpers
 
@@ -13,7 +13,7 @@
 // Structure to use as key in the map: identifies a process by PID and name
 struct mem_key
 {
-    u32 pid; // Process ID
+    u32 pid;                  // Process ID
     char comm[TASK_COMM_LEN]; // Process name (command)
 };
 
@@ -28,10 +28,10 @@ struct mem_stats
 struct
 {
     __uint(type, BPF_MAP_TYPE_HASH); // Map type: hash
-    __uint(max_entries, 16384); // Maximum number of entries
-    __type(key, struct mem_key); // Key type: mem_key
+    __uint(max_entries, 16384);      // Maximum number of entries
+    __type(key, struct mem_key);     // Key type: mem_key
     __type(value, struct mem_stats); // Value type: mem_stats
-} ram_usage SEC(".maps"); // Place in .maps section
+} ram_usage SEC(".maps");            // Place in .maps section
 
 // Convert page order to number of bytes
 static __always_inline u64 order_to_bytes(int order)
@@ -46,7 +46,7 @@ static __always_inline u64 order_to_bytes(int order)
 // Fill mem_key with current process PID and name
 static __always_inline void fill_key(struct mem_key *k)
 {
-    k->pid = bpf_get_current_pid_tgid() >> 32; // Get current PID
+    k->pid = bpf_get_current_pid_tgid() >> 32;       // Get current PID
     bpf_get_current_comm(&k->comm, sizeof(k->comm)); // Get current process name
 }
 
@@ -55,9 +55,9 @@ SEC("tracepoint/kmem/mm_page_alloc")
 int trace_alloc(struct trace_event_raw_mm_page_alloc *ctx)
 {
     struct mem_key key = {}; // Initialize key
-    fill_key(&key); // Fill key with current process info
+    fill_key(&key);          // Fill key with current process info
 
-    int order = ctx->order; // Get allocation order from context
+    int order = ctx->order;           // Get allocation order from context
     u64 size = order_to_bytes(order); // Calculate allocated size in bytes
 
     struct mem_stats *val = bpf_map_lookup_elem(&ram_usage, &key); // Lookup stats for this process
@@ -68,7 +68,7 @@ int trace_alloc(struct trace_event_raw_mm_page_alloc *ctx)
     else
     {
         struct mem_stats init = {.alloc_bytes = size, .free_bytes = 0}; // Otherwise, initialize stats
-        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY); // Insert new entry into map
+        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY);          // Insert new entry into map
     }
 
     return 0; // Return success
@@ -79,9 +79,9 @@ SEC("tracepoint/kmem/mm_page_free")
 int trace_free(struct trace_event_raw_mm_page_free *ctx)
 {
     struct mem_key key = {}; // Initialize key
-    fill_key(&key); // Fill key with current process info
+    fill_key(&key);          // Fill key with current process info
 
-    int order = ctx->order; // Get free order from context
+    int order = ctx->order;           // Get free order from context
     u64 size = order_to_bytes(order); // Calculate freed size in bytes
 
     struct mem_stats *val = bpf_map_lookup_elem(&ram_usage, &key); // Lookup stats for this process
@@ -92,7 +92,7 @@ int trace_free(struct trace_event_raw_mm_page_free *ctx)
     else
     {
         struct mem_stats init = {.alloc_bytes = 0, .free_bytes = size}; // Otherwise, initialize stats
-        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY); // Insert new entry into map
+        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY);          // Insert new entry into map
     }
 
     return 0; // Return success
