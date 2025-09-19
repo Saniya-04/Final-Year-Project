@@ -39,85 +39,150 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            RAM Dashboard Login
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Select your role and enter credentials
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="role" className="sr-only">
-                Role
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-              >
-                <option value="local">Local User</option>
-                <option value="admin">Admin User</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                value={formData.username}
-                onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
-            </div>
-          </div>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#0f172a", // solid dark background instead of gradient
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "420px",
+          width: "100%",
+          padding: "40px",
+          borderRadius: "18px",
+          background: "linear-gradient(160deg, #1f2937, #111827)",
+          boxShadow: "0 12px 30px rgba(0,0,0,0.7)",
+          color: "#e5e7eb",
+          textAlign: "center",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "30px",
+            fontWeight: "700",
+            marginBottom: "10px",
+            background: "linear-gradient(90deg, #9ca3af, #f3f4f6)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          RAM Dashboard
+        </h2>
+        <p style={{ marginBottom: "20px", color: "#9ca3af" }}>
+          Select your role and enter credentials
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            width: "100%",
+          }}
+        >
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            style={{
+              width: "350px",
+              padding: "14px",
+              borderRadius: "10px",
+              background: "#1e293b",
+              border: "1px solid #374151",
+              outline: "none",
+              fontSize: "14px",
+              color: "#f9fafb",
+            }}
+          >
+            <option value="local">Local User</option>
+            <option value="admin">Admin User</option>
+          </select>
+
+          <input
+            type="text"
+            name="username"
+            value={formData.username}
+            onChange={handleChange}
+            placeholder="Username"
+            required
+            style={{
+              width: "320px",
+              padding: "14px",
+              borderRadius: "10px",
+              background: "#1e293b",
+              border: "1px solid #374151",
+              outline: "none",
+              fontSize: "14px",
+              color: "#f9fafb",
+            }}
+          />
+
+          <input
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            placeholder="Password"
+            required
+            style={{
+              width: "320px",
+              padding: "14px",
+              borderRadius: "10px",
+              background: "#1e293b",
+              border: "1px solid #374151",
+              outline: "none",
+              fontSize: "14px",
+              color: "#f9fafb",
+            }}
+          />
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <div style={{ color: "#f87171", fontSize: "14px" }}>{error}</div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-
-          <div className="text-sm text-center text-gray-600">
-            <p>Demo Credentials:</p>
-            <p>Local: username: "local", password: "local"</p>
-            <p>Admin: username: "admin", password: "admin"</p>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "350px",
+              padding: "14px",
+              borderRadius: "10px",
+              background: loading
+                ? "rgba(75,85,99,0.6)"
+                : "linear-gradient(90deg, #6b7280, #9ca3af)",
+              color: "#111827",
+              fontWeight: "600",
+              fontSize: "15px",
+              border: "none",
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: "0 4px 14px rgba(255,255,255,0.15)",
+              transition: "all 0.3s ease",
+            }}
+            onMouseOver={(e) => {
+              if (!loading)
+                e.target.style.background =
+                  "linear-gradient(90deg, #9ca3af, #d1d5db)";
+            }}
+            onMouseOut={(e) => {
+              if (!loading)
+                e.target.style.background =
+                  "linear-gradient(90deg, #6b7280, #9ca3af)";
+            }}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
         </form>
+
+        <div style={{ marginTop: "20px", fontSize: "13px", color: "#9ca3af" }}>
+          <p>Demo Credentials:</p>
+          <p>Local: username: "local", password: "local"</p>
+          <p>Admin: username: "admin", password: "admin"</p>
+        </div>
       </div>
     </div>
   );
