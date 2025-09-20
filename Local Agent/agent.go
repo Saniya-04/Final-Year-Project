@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,6 +51,9 @@ func commToString(c [taskCommLen]byte) string {
 	return s
 }
 
+//go:embed ram_monitor.o
+var bpfObj []byte
+
 func main() {
 
 	var conn net.Conn
@@ -59,7 +64,7 @@ func main() {
 		if err != nil {
 			log.Printf("server disconnected, retrying...")
 			if conn != nil {
-				conn.Close()	
+				conn.Close()
 			}
 			for {
 				conn, err = net.Dial("tcp", "localhost:8080")
@@ -73,10 +78,10 @@ func main() {
 			}
 		}
 
-		objPath := "ram_monitor.o"
-		spec, err := ebpf.LoadCollectionSpec(objPath)
+		spec, err := ebpf.LoadCollectionSpecFromReader(bytes.NewReader(bpfObj))
+
 		if err != nil {
-			log.Fatalf("loading BPF spec %q: %v", objPath, err)
+			log.Fatalf("loading BPF spec: %v", err)
 		}
 
 		objs := struct {
@@ -113,7 +118,7 @@ func main() {
 
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
 	mainloop:
