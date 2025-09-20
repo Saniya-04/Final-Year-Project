@@ -3,15 +3,22 @@
 # Ignore Firebase service account key
 Server/serviceAccountKey.json
 
-# Other common ignores
-*.log
-*.tmp
-*.swp
+# Go build artifacts
+/agent
+*.exe
+*.out
+*.test
+
+# eBPF build artifacts
+*.o
+*.elf
+
+# OS/editor junk
 .DS_Store
-node_modules/
-venv/
-__pycache__/
-.env
+Thumbs.db
+
+# Logs
+*.log
 
 #Executable
 agent
