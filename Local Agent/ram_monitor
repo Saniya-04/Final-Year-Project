@@ -1,0 +1,101 @@
+#include "vmlinux.h"         // Include kernel vmlinux BTF header for eBPF
+#include <bpf/bpf_helpers.h> // eBPF helper macros and functions
+#include <bpf/bpf_tracing.h> // eBPF tracing helpers
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096ULL // Define PAGE_SIZE as 4096 bytes if not already defined
+#endif
+
+#ifndef TASK_COMM_LEN
+#define TASK_COMM_LEN 16 // Define TASK_COMM_LEN as 16 if not already defined
+#endif
+
+// Structure to use as key in the map: identifies a process by PID and name
+struct mem_key
+{
+    u32 pid;                  // Process ID
+    char comm[TASK_COMM_LEN]; // Process name (command)
+};
+
+// Structure to store memory allocation/free statistics
+struct mem_stats
+{
+    u64 alloc_bytes; // Total allocated bytes
+    u64 free_bytes;  // Total freed bytes
+};
+
+// Define a BPF hash map to store memory stats per process
+struct
+{
+    __uint(type, BPF_MAP_TYPE_HASH); // Map type: hash
+    __uint(max_entries, 16384);      // Maximum number of entries
+    __type(key, struct mem_key);     // Key type: mem_key
+    __type(value, struct mem_stats); // Value type: mem_stats
+} ram_usage SEC(".maps");            // Place in .maps section
+
+// Convert page order to number of bytes
+static __always_inline u64 order_to_bytes(int order)
+{
+    if (order <= 0)
+    {
+        return PAGE_SIZE; // If order is 0 or less, return one page
+    }
+    return ((u64)1 << order) * PAGE_SIZE; // Otherwise, calculate bytes as 2^order * PAGE_SIZE
+}
+
+// Fill mem_key with current process PID and name
+static __always_inline void fill_key(struct mem_key *k)
+{
+    k->pid = bpf_get_current_pid_tgid() >> 32;       // Get current PID
+    bpf_get_current_comm(&k->comm, sizeof(k->comm)); // Get current process name
+}
+
+// Tracepoint handler for page allocation events
+SEC("tracepoint/kmem/mm_page_alloc")
+int trace_alloc(struct trace_event_raw_mm_page_alloc *ctx)
+{
+    struct mem_key key = {}; // Initialize key
+    fill_key(&key);          // Fill key with current process info
+
+    int order = ctx->order;           // Get allocation order from context
+    u64 size = order_to_bytes(order); // Calculate allocated size in bytes
+
+    struct mem_stats *val = bpf_map_lookup_elem(&ram_usage, &key); // Lookup stats for this process
+    if (val)
+    {
+        __sync_fetch_and_add(&val->alloc_bytes, size); // If found, increment allocated bytes
+    }
+    else
+    {
+        struct mem_stats init = {.alloc_bytes = size, .free_bytes = 0}; // Otherwise, initialize stats
+        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY);          // Insert new entry into map
+    }
+
+    return 0; // Return success
+}
+
+// Tracepoint handler for page free events
+SEC("tracepoint/kmem/mm_page_free")
+int trace_free(struct trace_event_raw_mm_page_free *ctx)
+{
+    struct mem_key key = {}; // Initialize key
+    fill_key(&key);          // Fill key with current process info
+
+    int order = ctx->order;           // Get free order from context
+    u64 size = order_to_bytes(order); // Calculate freed size in bytes
+
+    struct mem_stats *val = bpf_map_lookup_elem(&ram_usage, &key); // Lookup stats for this process
+    if (val)
+    {
+        __sync_fetch_and_add(&val->free_bytes, size); // If found, increment freed bytes
+    }
+    else
+    {
+        struct mem_stats init = {.alloc_bytes = 0, .free_bytes = size}; // Otherwise, initialize stats
+        bpf_map_update_elem(&ram_usage, &key, &init, BPF_ANY);          // Insert new entry into map
+    }
+
+    return 0; // Return success
+}
+
+char LICENSE[] SEC("license") = "GPL"; // Specify license as GPL for eBPF
