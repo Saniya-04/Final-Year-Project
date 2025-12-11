@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Specifies character encoding as UTF-8 (supports all languages) -->
+    <meta charset="utf-8" />
+    
+    <!-- Favicon: the small icon displayed in browser tabs -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    
+    <!-- Viewport meta tag: ensures responsive design on mobile devices -->
+    <!-- initial-scale=1 sets the initial zoom level to 100% -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- Sets the browser's address bar color on Android devices -->
+    <meta name="theme-color" content="#000000" />
+    
+    <!-- Description that appears in search engine results -->
+    <meta
+      name="description"
+      content="RAM Monitoring Dashboard - Monitor memory usage across systems with real-time alerts"
+    />
+    
+    <!-- Apple touch icon: displayed when users add app to iPhone home screen -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- Web app manifest: configures how the app appears when installed as PWA -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Bootstrap CSS framework: provides pre-built styling and components -->
+    <!-- CDN = Content Delivery Network (loads from external server) -->
+    <!-- Integrity hash ensures file hasn't been tampered with -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    
+    <!-- Font Awesome icon library: provides thousands of icons -->
+    <!-- Used for visual elements like buttons, alerts, charts, etc. -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    
+    <!-- Page title displayed in browser tab and bookmarks -->
+    <title>RAM Monitoring Dashboard</title>
+  </head>
+  
+  <body>
+    <!-- Fallback message if JavaScript is disabled in the browser -->
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    
+    <!-- Root div: React/Vue/Angular apps inject content here -->
+    <!-- This is where your entire dashboard UI will be rendered -->
+    <div id="root"></div>
+    
+    <!-- Bootstrap JavaScript bundle: enables interactive components -->
+    <!-- Must load at end of body so HTML elements are ready first -->
+    <!-- Includes Popper.js for tooltips and dropdowns -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
